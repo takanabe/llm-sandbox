@@ -1,10 +1,23 @@
 import os
+
 import openai
+from langchain.llms import OpenAI
+from langchain import PromptTemplate, LLMChain
 
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
 
+from langchain.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, Field, validator
+
 app = FastAPI()
+
+class WordInformation(BaseModel):
+    word: str = Field(description="the word")
+    english_meaning: str = Field(description="meaning of the word in English")
+    english_example: str = Field(description="example of the word in English")
+    japanese_meaning: str = Field(description="meaning of the word in Japanese")
+    japanese_example: str = Field(description="example of the word in Japanese")
 
 def get_word_meaning(api_key, word):
     openai.api_key = api_key
@@ -20,43 +33,29 @@ def get_word_meaning(api_key, word):
 
 def get_word_information(api_key, word):
 
-    prompt = f"Please provide the following information for the English word'{word}':\n\n" \
-             f"1. English meaning\n" \
-             f"2. English example\n" \
-             f"3. Japanese meaning\n" \
-             f"4. Japanese example\n\n" \
-             f"Answer:\n" \
-             f"1. {{English meaning}}\n" \
-             f"2. {{English example}}\n" \
-             f"3. {{Japanese meaning}}\n" \
-             f"4. {{Japanese example}}"
+    # Set up a parser + inject instructions into the prompt template.
+    # https://python.langchain.com/en/latest/modules/prompts/output_parsers/examples/pydantic.html#
+    parser = PydanticOutputParser(pydantic_object=WordInformation)
+    query = f"""
+        Instruction: You are an professional English Teacher.\n\n
+        Question: Tell me about '{word}'.\n\n
+    """
+    template = "{query}.\n{format_instructions}\n"
 
-    data = {
-        "prompt": prompt,
-        "max_tokens": 200,
-        "n": 1,
-        "stop": None,
-        "temperature": 0.5,
-    }
-
-    completion = openai.Completion.create(
-        model="text-davinci-003",
-        prompt=prompt,
-        max_tokens=200,
-        temperature=0.5,
+    prompt = PromptTemplate(
+        template=template,
+        input_variables=["query"],
+        partial_variables={"format_instructions": parser.get_format_instructions()},
     )
 
-    ret = completion.choices[0].text
+    _input = prompt.format_prompt(query=query)
 
-    # if answer:
-    #     word_info = parse_answer(answer)
-    #     table = PrettyTable()
-    #     table.field_names = ["ID", "Word", "English Meaning", "English Example", "Japanese Meaning", "Japanese Example"]
-    #     table.add_row([1, word, word_info["1"], word_info["2"], word_info["3"], word_info["4"]])
-    #     print(table)
-    # else:
-    #     print(f"Could not find the information for '{word}'")
-    return ret
+    model = OpenAI(
+        model_name="text-davinci-003",
+    )
+
+    output = model(_input.to_string())
+    return parser.parse(output)
 
 def parse_answer(answer):
     lines = answer.split("\n")
