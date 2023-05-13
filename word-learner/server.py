@@ -13,6 +13,8 @@ from pydantic import BaseModel, Field, validator
 from langchain.memory import ConversationBufferMemory
 
 
+from sqlmodel import Field, Session, SQLModel, create_engine, select
+
 app = FastAPI()
 memory = ConversationBufferMemory()
 
@@ -24,9 +26,19 @@ class WordInformation(BaseModel):
     japanese_meaning: str = Field(description="meaning of the word in Japanese")
     japanese_example: str = Field(description="example of the word in Japanese")
 
+
+class DBWordInformation(SQLModel, table=True):
+    id: int = Field(default=None, primary_key=True)
+    word: str
+    english_meaning: str
+    english_example: str
+    japanese_meaning: str
+    japanese_example: str
+
+
 def get_word_meaning(api_key, word):
     openai.api_key = api_key
-    chat_completion =  openai.ChatCompletion.create(
+    chat_completion = openai.ChatCompletion.create(
         model="gpt-4",
         messages=[
             {"role": "system", "content": "Your are a professional English teacher."},
@@ -36,7 +48,12 @@ def get_word_meaning(api_key, word):
     ret = chat_completion.choices[0].message.content
     return ret
 
+
 def get_word_information(api_key, word):
+
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    engine = create_engine(f"sqlite://{abs_path}/database.db")
+    SQLModel.metadata.create_all(engine)
 
     # Set up a parser + inject instructions into the prompt template.
     # https://python.langchain.com/en/latest/modules/prompts/output_parsers/examples/pydantic.html#
@@ -56,24 +73,25 @@ def get_word_information(api_key, word):
     model = OpenAI(
         model_name="text-davinci-003",
     )
+    _input = prompt.format_prompt(query=query)
+    output = model(_input.to_string())
 
-    llm_chain = LLMChain(
-        llm=model,
-        prompt=prompt,
-        verbose=True,
-        memory=memory,
+    ret: WordInformation = parser.parse(output)
+
+    wordInfo: DBWordInformation = DBWordInformation(
+        word=ret.word,
+        english_meaning=ret.english_meaning,
+        english_example=ret.english_example,
+        japanese_meaning=ret.japanese_meaning,
+        japanese_example=ret.japanese_example,
     )
 
-    output = llm_chain.predict(query=query)
+    with Session(engine) as session:
+        session.add(wordInfo)
+        session.commit()
 
-    print(memory.load_memory_variables({}))
+    return ret
 
-    words = []
-    for mem in memory.chat_memory.messages:
-        if mem.type == 'ai':
-            words.append(parser.parse(mem.content))
-
-    return words
 
 def parse_answer(answer):
     lines = answer.split("\n")
@@ -89,6 +107,7 @@ async def receive_message(request: Request):
     data = await request.body()
     message = data.decode('utf-8')
     return f"You sent: {message}"
+
 
 @app.post("/word", response_class=PlainTextResponse)
 async def receive_word(request: Request):
