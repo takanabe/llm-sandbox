@@ -10,7 +10,12 @@ from fastapi.responses import PlainTextResponse
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field, validator
 
+from langchain.memory import ConversationBufferMemory
+
+
 app = FastAPI()
+memory = ConversationBufferMemory()
+
 
 class WordInformation(BaseModel):
     word: str = Field(description="the word")
@@ -48,14 +53,27 @@ def get_word_information(api_key, word):
         partial_variables={"format_instructions": parser.get_format_instructions()},
     )
 
-    _input = prompt.format_prompt(query=query)
-
     model = OpenAI(
         model_name="text-davinci-003",
     )
 
-    output = model(_input.to_string())
-    return parser.parse(output)
+    llm_chain = LLMChain(
+        llm=model,
+        prompt=prompt,
+        verbose=True,
+        memory=memory,
+    )
+
+    output = llm_chain.predict(query=query)
+
+    print(memory.load_memory_variables({}))
+
+    words = []
+    for mem in memory.chat_memory.messages:
+        if mem.type == 'ai':
+            words.append(parser.parse(mem.content))
+
+    return words
 
 def parse_answer(answer):
     lines = answer.split("\n")
