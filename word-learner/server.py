@@ -9,31 +9,24 @@ from fastapi.responses import PlainTextResponse
 
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field, validator
+from typing import List
 
 from langchain.memory import ConversationBufferMemory
 
 
+
 from sqlmodel import Field, Session, SQLModel, create_engine, select
+
+from models.word_information import WordInformation, DBWordInformation
 
 app = FastAPI()
 memory = ConversationBufferMemory()
 
-
-class WordInformation(BaseModel):
-    word: str = Field(description="the word")
-    english_meaning: str = Field(description="meaning of the word in English")
-    english_example: str = Field(description="example of the word in English")
-    japanese_meaning: str = Field(description="meaning of the word in Japanese")
-    japanese_example: str = Field(description="example of the word in Japanese")
+abs_path = os.path.dirname(os.path.abspath(__file__))
+engine = create_engine(f"sqlite://{abs_path}/database.db")
+SQLModel.metadata.create_all(engine)
 
 
-class DBWordInformation(SQLModel, table=True):
-    id: int = Field(default=None, primary_key=True)
-    word: str
-    english_meaning: str
-    english_example: str
-    japanese_meaning: str
-    japanese_example: str
 
 
 def get_word_meaning(api_key, word):
@@ -50,10 +43,6 @@ def get_word_meaning(api_key, word):
 
 
 def get_word_information(api_key, word):
-
-    abs_path = os.path.dirname(os.path.abspath(__file__))
-    engine = create_engine(f"sqlite://{abs_path}/database.db")
-    SQLModel.metadata.create_all(engine)
 
     # Set up a parser + inject instructions into the prompt template.
     # https://python.langchain.com/en/latest/modules/prompts/output_parsers/examples/pydantic.html#
@@ -127,3 +116,11 @@ async def receive_word(request: Request):
         return f"The meaning of '{word}' is: {meaning}"
     else:
         return f"Could not find the meaning of '{word}'"
+
+@app.get("/words", response_model=List[DBWordInformation])
+async def list_words() -> List[DBWordInformation]:
+    with Session(engine) as session:
+        query = select(DBWordInformation)
+        ret: List[DBWordInformation] = session.exec(query).all()
+        return ret
+
