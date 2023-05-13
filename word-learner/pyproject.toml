@@ -10,6 +10,7 @@ packages = [{include = "word_learner"}]
 python = "^3.11"
 fastapi = "^0.95.1"
 uvicorn = "^0.22.0"
+requests = "^2.30.0"
 
 
 [build-system]
