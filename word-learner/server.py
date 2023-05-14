@@ -1,48 +1,31 @@
 import os
-
-import openai
-from langchain.llms import OpenAI
-from langchain import PromptTemplate
+from typing import List
 
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
-
+from langchain import PromptTemplate
+from langchain.llms import OpenAI
 from langchain.output_parsers import PydanticOutputParser
-from typing import List
+from sqlmodel import Session, SQLModel, create_engine, select
 
-from langchain.memory import ConversationBufferMemory
+from models.word_information import WordInformation
 
+# LangChain uses OPENAI_API_KEY
+# https://python.langchain.com/en/latest/ecosystem/openai.html#installation-and-setup
+if not os.environ.get("OPENAI_API_KEY"):
+    print("API key not found in environment variables. Please set the 'OPENAI_API_KEY' variable.")
+    exit(1)
 
-
-from sqlmodel import Field, Session, SQLModel, create_engine, select
-
-from models.word_information import WordInformation, DBWordInformation
-
+# Setup API server
 app = FastAPI()
-memory = ConversationBufferMemory()
 
+# Setup DB
 abs_path = os.path.dirname(os.path.abspath(__file__))
 engine = create_engine(f"sqlite://{abs_path}/database.db")
 SQLModel.metadata.create_all(engine)
 
 
-
-
-def get_word_meaning(api_key, word):
-    openai.api_key = api_key
-    chat_completion = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "Your are a professional English teacher."},
-            {"role": "user", "content": "Teach the meaning of the following english word: " + word},
-        ],
-    )
-    ret = chat_completion.choices[0].message.content
-    return ret
-
-
-def get_word_information(api_key, word):
-
+def get_word_information(word):
     # Set up a parser + inject instructions into the prompt template.
     # https://python.langchain.com/en/latest/modules/prompts/output_parsers/examples/pydantic.html#
     parser = PydanticOutputParser(pydantic_object=WordInformation)
@@ -59,72 +42,48 @@ def get_word_information(api_key, word):
     )
 
     model = OpenAI(
-        max_tokens = 1000,
+        max_tokens=1000,
         model_name="text-davinci-003",
     )
+
     _input = prompt.format_prompt(query=query)
     output = model(_input.to_string())
 
-    ret: WordInformation = parser.parse(output)
+    word_info: WordInformation = parser.parse(output)
+    # remove ID assigned by LangChain and OutputParser
+    # to rely on the ID autoincrement of DB.
+    word_info.id = None
 
-    wordInfo: DBWordInformation = DBWordInformation(
-        word=ret.word,
-        # ipa_pronunciation=ret.ipa_pronunciation,
-        # phonetic_spelling=ret.phonetic_spelling,
-        english_meaning=ret.english_meaning,
-        english_example=ret.english_example,
-        english_example2=ret.english_example2,
-        japanese_meaning=ret.japanese_meaning,
-        japanese_example=ret.japanese_example,
-        japanese_example2=ret.japanese_example2,
-    )
-
-    with Session(engine) as session:
-        session.add(wordInfo)
+    with Session(engine, expire_on_commit=False) as session:
+        session.add(word_info)
         session.commit()
 
-    return ret
-
-
-def parse_answer(answer):
-    lines = answer.split("\n")
-    parsed_info = {}
-    for line in lines:
-        key, value = line.split(".", 1)
-        parsed_info[key.strip()] = value.strip()
-    return parsed_info
+    return word_info
 
 
 @app.post("/", response_class=PlainTextResponse)
 async def receive_message(request: Request):
     data = await request.body()
-    message = data.decode('utf-8')
+    message = data.decode("utf-8")
     return f"You sent: {message}"
 
 
-@app.post("/word", response_class=PlainTextResponse)
+@app.post("/word", response_model=WordInformation)
 async def receive_word(request: Request):
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        print("API key not found in environment variables. Please set the 'OPENAI_API_KEY' variable.")
-        exit(1)
-
     data = await request.body()
-    word = data.decode('utf-8')
+    word = data.decode("utf-8")
 
-    # Switch API
-    # meaning = get_word_meaning(api_key, word)
-    meaning = get_word_information(api_key, word)
+    ret: WordInformation = get_word_information(word)
 
-    if meaning:
-        return f"The meaning of '{word}' is: {meaning}"
+    if ret:
+        return ret
     else:
         return f"Could not find the meaning of '{word}'"
 
-@app.get("/words", response_model=List[DBWordInformation])
-async def list_words() -> List[DBWordInformation]:
-    with Session(engine) as session:
-        query = select(DBWordInformation)
-        ret: List[DBWordInformation] = session.exec(query).all()
-        return ret
 
+@app.get("/words", response_model=List[WordInformation])
+async def list_words() -> List[WordInformation]:
+    with Session(engine) as session:
+        query = select(WordInformation)
+        ret: List[WordInformation] = session.exec(query).all()
+        return ret
