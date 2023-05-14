@@ -4,6 +4,8 @@ import requests
 from pydantic import parse_obj_as
 
 from models.word_information import DBWordInformation
+from prettytable import PrettyTable
+
 
 
 def word_registration():
@@ -26,14 +28,19 @@ def word_quiz():
         data = response.json()
         words = parse_obj_as(List[DBWordInformation], data)
 
+        table = PrettyTable()
+        table.field_names = ["No.", "Word", "English meaning", "English example", "Japanese meaning", "Japanese example"]
+
         for word in words:
-            print(f"ID: {word.id}")
-            print(f"Word: {word.word}")
-            print(f"English meaning: {word.english_meaning}")
-            print(f"English example: {word.english_example}")
-            print(f"Japanese meaning: {word.japanese_meaning}")
-            print(f"Japanese example: {word.japanese_example}")
-            print("")
+            table.add_row([word.id, word.word, word.english_meaning, word.english_example, word.japanese_meaning, word.japanese_example])
+            # print(f"ID: {word.id}")
+            # print(f"Word: {word.word}")
+            # print(f"English meaning: {word.english_meaning}")
+            # print(f"English example: {word.english_example}")
+            # print(f"Japanese meaning: {word.japanese_meaning}")
+            # print(f"Japanese example: {word.japanese_example}")
+            # print("")
+        print(table)
     else:
         print(f"Request failed with status code {response.status_code}")
 
