@@ -7,7 +7,6 @@ from models.word_information import DBWordInformation
 from prettytable import PrettyTable
 
 
-
 def word_registration():
     url = "http://127.0.0.1:8000/word"
     word = input("Enter the word to register: ")
@@ -19,6 +18,7 @@ def word_registration():
     else:
         print(f"Request failed with status code {response.status_code}")
 
+
 def word_quiz():
     url = "http://127.0.0.1:8000/words"
 
@@ -29,20 +29,35 @@ def word_quiz():
         words = parse_obj_as(List[DBWordInformation], data)
 
         table = PrettyTable()
-        table.field_names = ["No.", "Word", "English meaning", "English example", "Japanese meaning", "Japanese example"]
+        table.field_names = [
+            "No.",
+            "Word",
+            "English meaning",
+            "English example",
+            "Japanese meaning",
+            "Japanese example",
+        ]
+
+        table.align = 'l'
 
         for word in words:
-            table.add_row([word.id, word.word, word.english_meaning, word.english_example, word.japanese_meaning, word.japanese_example])
-            # print(f"ID: {word.id}")
-            # print(f"Word: {word.word}")
-            # print(f"English meaning: {word.english_meaning}")
-            # print(f"English example: {word.english_example}")
-            # print(f"Japanese meaning: {word.japanese_meaning}")
-            # print(f"Japanese example: {word.japanese_example}")
-            # print("")
+            # remove empty string and unnecessary white spaces at the beginning of the meanings.
+            en_mean_split = [s.strip() for s in word.english_meaning.split('|') if len(s) > 0]
+            ja_mean_split = [s.strip() for s in word.japanese_meaning.split('|') if len(s) > 0]
+            table.add_row([
+                word.id,
+                word.word,
+                # word.ipa_pronunciation,
+                # word.phonetic_spelling,
+                '\n'.join(en_mean_split),
+                f"1. {word.english_example}\n2. {word.english_example2}",
+                '\n'.join(ja_mean_split),
+                f"1. {word.japanese_example}\n2. {word.japanese_example2}",
+            ])
         print(table)
     else:
-        print(f"Request failed with status code {response.status_code}")
+       print(f"Request failed with status code {response.status_code}")
+
 
 def main():
     print("Please choose an option:")
@@ -57,6 +72,7 @@ def main():
         word_quiz()
     else:
         print("Invalid choice. Please enter 1 or 2.")
+
 
 if __name__ == '__main__':
     main()

@@ -2,13 +2,12 @@ import os
 
 import openai
 from langchain.llms import OpenAI
-from langchain import PromptTemplate, LLMChain
+from langchain import PromptTemplate
 
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
 
 from langchain.output_parsers import PydanticOutputParser
-from pydantic import BaseModel, Field, validator
 from typing import List
 
 from langchain.memory import ConversationBufferMemory
@@ -48,7 +47,7 @@ def get_word_information(api_key, word):
     # https://python.langchain.com/en/latest/modules/prompts/output_parsers/examples/pydantic.html#
     parser = PydanticOutputParser(pydantic_object=WordInformation)
     query = f"""
-        Instruction: You are an professional English Teacher.\n\n
+        Instruction: You are an professional English teacher.\n\n
         Question: Tell me about '{word}'.\n\n
     """
     template = "{query}.\n{format_instructions}\n"
@@ -60,6 +59,7 @@ def get_word_information(api_key, word):
     )
 
     model = OpenAI(
+        max_tokens = 1000,
         model_name="text-davinci-003",
     )
     _input = prompt.format_prompt(query=query)
@@ -69,10 +69,14 @@ def get_word_information(api_key, word):
 
     wordInfo: DBWordInformation = DBWordInformation(
         word=ret.word,
+        # ipa_pronunciation=ret.ipa_pronunciation,
+        # phonetic_spelling=ret.phonetic_spelling,
         english_meaning=ret.english_meaning,
         english_example=ret.english_example,
+        english_example2=ret.english_example2,
         japanese_meaning=ret.japanese_meaning,
         japanese_example=ret.japanese_example,
+        japanese_example2=ret.japanese_example2,
     )
 
     with Session(engine) as session:
