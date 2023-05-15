@@ -1,4 +1,6 @@
-# openai-sandbox
+# llm-sandbox
+
+A repository containing bunch of LLM application research projects.
 
 ## OpenAI's API reference
 
