@@ -18,12 +18,8 @@ class WordInformation(SQLModel, table=True):
         " if there are following word classes. For example, '[Noun]: A person or thing"
         " that provides assistance|[Adjective]: Serving to aid or support; supplementary'"
     )
-    english_example: str = Field(
-        description="Example of the word in English"
-    )
-    english_example2: str = Field(
-        description="Example 2 of the word in English"
-    )
+    english_example: str = Field(description="Example of the word in English")
+    english_example2: str = Field(description="Example 2 of the word in English")
     japanese_meaning: str = Field(
         description="Meaning of the word in Japanese. List as many word classes as possible."
         " Add the prefix [<word_class>]: and add '|' at the end of each word class"

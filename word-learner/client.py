@@ -44,6 +44,7 @@ def word_registration():
     else:
         print(f"Request failed with status code {response.status_code}")
 
+
 def word_list():
     url = "http://127.0.0.1:8000/words"
 
