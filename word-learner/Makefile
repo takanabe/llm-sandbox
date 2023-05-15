@@ -13,3 +13,11 @@ lint:
 	poetry run pflake8
 	poetry run isort --check --diff *.py models/*.py
 	poetry run black --check *.py models/*.py
+
+.PHONY: server
+server:
+	poetry run uvicorn server:app --host 0.0.0.0 --port 8000
+
+.PHONY: client
+client:
+	poetry run python client.py

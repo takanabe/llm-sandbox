@@ -21,7 +21,9 @@ app = FastAPI()
 
 # Setup DB
 abs_path = os.path.dirname(os.path.abspath(__file__))
-engine = create_engine(f"sqlite://{abs_path}/database.db")
+# An absolute path, which is denoted by starting with a slash, means you need four slashes:
+# https://docs.sqlalchemy.org/en/13/dialects/sqlite.html#connect-strings
+engine = create_engine(f"sqlite:///{abs_path}/database.sqlite")
 SQLModel.metadata.create_all(engine)
 
 
