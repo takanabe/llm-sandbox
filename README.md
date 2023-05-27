@@ -2,6 +2,12 @@
 
 A repository containing bunch of LLM application research projects.
 
+## To be created
+
+- [ ] [Extraction](https://docs.langchain.com/docs/use-cases/extraction)
+- [ ] [Question Answering Over Documents](https://docs.langchain.com/docs/use-cases/qa-docs)
+- [ ] [Personal Assistants](https://docs.langchain.com/docs/use-cases/personal-assistants)
+
 ## OpenAI's API reference
 
 Read https://platform.openai.com/docs/api-reference/authentication
