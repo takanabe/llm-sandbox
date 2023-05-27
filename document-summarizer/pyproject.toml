@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "document-summarizer"
+version = "0.1.0"
+description = ""
+authors = ["Takayuki Watanabe <takanabe.w@gmail.com>"]
+readme = "README.md"
+packages = [{include = "document_summarizer"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+langchain = "0.0.181"
+pypdf = "^3.9.0"
+openai = "^0.27.7"
+tiktoken = "^0.4.0"
+
+[tool.poetry.group.dev.dependencies]
+flake8 = "^6.0.0"
+isort = "^5.12.0"
+black = "^23.3.0"
+pyproject-flake8 = "^6.0.0.post1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
+
+# https://github.com/pf/black/blob/64887aab032c0fd64f9238cdab6684f2fc0c7f33/docs/compatible_configs/isort/setup.cfg
+[tool.isort]
+profile = 'black'
+
+# https://github.com/psf/black/blob/64887aab032c0fd64f9238cdab6684f2fc0c7f33/docs/compatible_configs/flake8/.flake8
+# Install pyproject-flake8 because flake8 does not support pyproject.toml yet.
+[tool.flake8]
+max-line-length = 120
+extend-ignore = "E203,"
