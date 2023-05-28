@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "document-extraction-as-structured-format"
+version = "0.1.0"
+description = ""
+authors = ["Takayuki Watanabe <takanabe.w@gmail.com>"]
+readme = "README.md"
+packages = [{include = "document_extraction_as_structured_format"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+langchain = "^0.0.181"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
