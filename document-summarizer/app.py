@@ -6,7 +6,7 @@ from langchain.document_loaders import PyPDFLoader
 MAX_TOKEN_FOR_OPEN_API_GPT_3_5 = 4096
 
 llm = OpenAI(temperature=0)
-loader = PyPDFLoader("data/coca-cola-from-wikipedia.pdf")
+loader = PyPDFLoader("../data/coca-cola-from-wikipedia.pdf")
 # load_and_split returns List[Document]. So, we don't need text splitter.
 pages = loader.load_and_split()
 
